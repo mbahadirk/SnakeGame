@@ -3,7 +3,6 @@ import pygame
 import sys
 from classes import Box
 from classes import Snake
-import time
 
 # initalize pygame
 pygame.init()
@@ -51,16 +50,38 @@ snakeList.append(snake)
 
 # apple
 eaten = True
-bestScore = 0
 
 # game settings
 run = True
 alive = True
 spacePressed = False
 clock = pygame.time.Clock()
-ticking = 12
-# intro settings
-settings = range(0,3)
+ticking = 8     # 8 is default
+bestScore = [None for _ in range(3)]
+levelIndex = 0   # 0 is default
+
+def gameMode(level):
+    global ticking, gameLevel,levelIndex
+    _list = ["easy","normal","hard"]
+    gameLevel = _list[level]
+    levelIndex = level
+    ticking = 8 + level*4
+gameMode(0)
+
+# # bestScore import
+with open("log.txt", "w+") as file:
+    try:
+        file.seek(0)
+        lines = file.readlines()
+        for index in range(0,3):
+            bestScore[index] = int(lines[index])
+    except IndexError:
+        file.write("0\n0\n0")
+        file.seek(0)
+        lines = file.readlines()
+        for index in range(0, 3):
+            bestScore[index] = int(lines[index])
+
 
 # random apple locate
 def newApple():
@@ -73,21 +94,20 @@ def newApple():
         if [appleRow, appleCol] not in snakePositions:
             break
 
-
 newApple()
 
 
 def drawScore():
     global snakeSize, bestScore
     scoreText = font.render(f"Score : {snakeSize}", True, (255, 255, 255))
-    bestScoreText = font.render(f"Best Score : {bestScore}", True, (255, 255, 255))
+    bestScoreText = font.render(f"Game Mode : {gameLevel}   Best Score : {bestScore[levelIndex]}", True, (255, 255, 255))
     screen.blit(scoreText, ((windowWidth / 2 - 50), 50))
-    screen.blit(bestScoreText, ((windowWidth / 2 - 50), 100))
+    screen.blit(bestScoreText, ((windowWidth / 2 - 250), 100))
 
 def gameOverText():
     global snakeSize
     text = font.render(f"Game Over", True, (255,255,255))
-    resetText = font.render(f"press _space to restart game", True, (255,255,255))
+    resetText = font.render(f"press _space or _enter to restart game", True, (255,255,255))
     screen.blit(text,((windowWidth/2-60),150))
     screen.blit(resetText,((windowWidth/2-60),800))
 
@@ -118,6 +138,7 @@ selected_level = None
 last_space_press_time = 0
 debounce_interval = 950
 startScreen = True
+
 def draw_menu():
     if startScreen:
         screen.blit(startText, ((windowWidth / 2 - 100), (windowHeight / 2 - 50)))
@@ -139,11 +160,11 @@ while intro:
             sys.exit()
         if event.type == pygame.KEYDOWN:
             if startScreen:
-                if event.key == pygame.K_DOWN:
+                if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                     selected_option = (selected_option + 1) % 2
-                elif event.key == pygame.K_UP:
+                elif event.key == pygame.K_UP or event.key == pygame.K_w:
                     selected_option = (selected_option - 1) % 2
-                elif event.key == pygame.K_SPACE:
+                elif event.key == pygame.K_SPACE or event.key == pygame.K_RETURN:
                     if selected_option == 0:
                         startScreen = False
                         level_select = True
@@ -151,19 +172,19 @@ while intro:
                         pygame.quit()
                         sys.exit()
             elif level_select:
-                if event.key == pygame.K_DOWN:
+                if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                     selected_option = (selected_option + 1) % 3
-                elif event.key == pygame.K_UP:
+                elif event.key == pygame.K_UP or event.key == pygame.K_w:
                     selected_option = (selected_option - 1) % 3
-                elif event.key == pygame.K_SPACE:
+                elif event.key == pygame.K_SPACE or event.key == pygame.K_RETURN:
                     if selected_option == 0:
-                        ticking = 8
+                        gameMode(0)
                         intro = False
                     elif selected_option == 1:
-                        ticking = 12
+                        gameMode(1)
                         intro = False
                     else:
-                        ticking = 16
+                        gameMode(2)
                         intro = False
     screen.fill("black")
 
@@ -179,19 +200,19 @@ while run:
             pygame.quit()
             sys.exit()
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
+            if event.key == pygame.K_UP or event.key == pygame.K_w:
                 snake.headY = -1
                 snake.headX = 0
-            elif event.key == pygame.K_DOWN:
+            elif event.key == pygame.K_DOWN or event.key == pygame.K_s:
                 snake.headY = 1
                 snake.headX = 0
-            elif event.key == pygame.K_RIGHT:
+            elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                 snake.headX = 1
                 snake.headY = 0
-            elif event.key == pygame.K_LEFT:
+            elif event.key == pygame.K_LEFT or event.key == pygame.K_a:
                 snake.headX = -1
                 snake.headY = 0
-            elif event.key == pygame.K_SPACE:
+            elif event.key == pygame.K_SPACE or event.key == pygame.K_RETURN:
                 spacePressed = True
 
 
@@ -230,8 +251,11 @@ while run:
     if alive:
         snake.move()
     else:
-        if snakeSize > bestScore:
-            bestScore = snakeSize
+        if snakeSize > bestScore[levelIndex]:
+            bestScore[levelIndex] = snakeSize
+            with open("log.txt", "w+") as file:
+                file.seek(0)
+                file.write(f"{bestScore[0]}\n{bestScore[1]}\n{bestScore[2]}")
         gameOverText()
         if spacePressed:    # press space for reset game
             resetGame()
